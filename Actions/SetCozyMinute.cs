@@ -2,6 +2,10 @@
  * Summary:
  * This script sets the current minute in COZY: Stylized Weather 3, preserving the current hour, and optionally sends a PlayMaker event.
  * 
+ * Notes:
+ * - Transition time (in seconds) applies to the time component (currentTime) only.
+ * - Seamlessly rolls-over to the next day when applicable.
+ * 
  * Event Setup:
  * It is recommended to create a global event in PlayMaker, e.g., "COZY/MinuteSet", to notify other FSMs when the minute changes.
  * You can select this event in the 'Event To Send' field of this action to trigger transitions or actions in other FSMs.
@@ -17,19 +21,22 @@
  * Made by Grim (Copium Games) for the COZY community.
  * Give me a follow on X? <3  https://x.com/copiumgames
  *
- * Version 1.0
+ * Version 1.1
  */
 using UnityEngine;
 using HutongGames.PlayMaker;
 using DistantLands.Cozy;
 
 [ActionCategory("COZY Stylized Weather 3")]
-[HutongGames.PlayMaker.Tooltip("Sets the current minute in COZY: Stylized Weather 3 and optionally sends an event")]
+[HutongGames.PlayMaker.Tooltip("Sets the current minute in COZY: Stylized Weather 3 with optional transition time and finish event")]
 public class SetCozyMinute : FsmStateAction
 {
     [RequiredField]
     [HutongGames.PlayMaker.Tooltip("The minute to set (0-59)")]
     public FsmInt minute;
+
+    [HutongGames.PlayMaker.Tooltip("Transition time in seconds (0 for instant)")]
+    public FsmFloat transitionTime;
 
     [HutongGames.PlayMaker.Tooltip("Event to send after setting the minute")]
     public FsmEvent finishEvent;
@@ -37,6 +44,7 @@ public class SetCozyMinute : FsmStateAction
     public override void Reset()
     {
         minute = 0;
+        transitionTime = 0f;
         finishEvent = null;
     }
 
@@ -63,8 +71,20 @@ public class SetCozyMinute : FsmStateAction
         }
 
         int currentHour = timeModule.currentTime.hours;
-        timeModule.currentTime = new MeridiemTime(currentHour, minute.Value);
-        cozyWeather.events.RaiseOnMinutePass();
+        MeridiemTime targetTime = new MeridiemTime(currentHour, minute.Value);
+
+        float transition = transitionTime.IsNone ? 0f : transitionTime.Value;
+        if (transition > 0f)
+        {
+            float timeToSkip = (float)targetTime - (float)timeModule.currentTime;
+            if (timeToSkip < 0f) timeToSkip += 1f; // Handle wrap-around
+            timeModule.TransitionTime(timeToSkip, transition);
+        }
+        else
+        {
+            timeModule.currentTime = targetTime;
+            cozyWeather.events.RaiseOnMinutePass();
+        }
 
         if (finishEvent != null)
         {

@@ -5,6 +5,7 @@
  * 
  * Notes:
  * - Transition time (in seconds) applies to the time component (currentTime) only.
+ * - Seamlessly rolls-over to the next day when applicable.
  * - Day and year changes are applied instantly.
  * - If transitionTime is 0 or None, changes are instant.
  * 
@@ -23,7 +24,7 @@
  * Made by Grim (Copium Games) for the COZY community.
  * Give me a follow on X? <3  https://x.com/copiumgames
  *
- * Version 1.0
+ * Version 1.1
  */
 using UnityEngine;
 using HutongGames.PlayMaker;

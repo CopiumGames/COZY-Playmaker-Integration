@@ -1,6 +1,11 @@
 /*
  * Summary:
- * This script sets the current day in COZY: Stylized Weather 3 and optionally sends a PlayMaker event.
+ * This script sets the current day in COZY: Stylized Weather 3, optionally transitions to a specified time-of-day, and sends a PlayMaker event.
+ * 
+ * * Notes:
+ * - Transition time (in seconds) applies to the time component (currentTime) only.
+ * - Day change is applied instantly.
+ * - If transitionTime is 0 or None, time-of-day changes are instant.
  * 
  * Event Setup:
  * It is recommended to create a global event in PlayMaker, e.g., "COZY/DaySet", to notify other FSMs when the day changes.
@@ -17,19 +22,28 @@
  * Made by Grim (Copium Games) for the COZY community.
  * Give me a follow on X? <3  https://x.com/copiumgames
  *
- * Version 1.0
+ * Version 1.1
  */
 using UnityEngine;
 using HutongGames.PlayMaker;
 using DistantLands.Cozy;
 
 [ActionCategory("COZY Stylized Weather 3")]
-[HutongGames.PlayMaker.Tooltip("Sets the current day in COZY: Stylized Weather 3 and optionally sends an event")]
+[HutongGames.PlayMaker.Tooltip("Sets the current day in COZY: Stylized Weather 3, optionally transitions to a specified time-of-day, and sends an event")]
 public class SetCozyDay : FsmStateAction
 {
     [RequiredField]
     [HutongGames.PlayMaker.Tooltip("The day to set (integer)")]
     public FsmInt day;
+
+    [HutongGames.PlayMaker.Tooltip("Hour to transition to (0-23, optional)")]
+    public FsmInt targetHour;
+
+    [HutongGames.PlayMaker.Tooltip("Minute to transition to (0-59, optional)")]
+    public FsmInt targetMinute;
+
+    [HutongGames.PlayMaker.Tooltip("Transition time in seconds for the time component (0 for instant)")]
+    public FsmFloat transitionTime;
 
     [HutongGames.PlayMaker.Tooltip("Event to send after setting the day")]
     public FsmEvent finishEvent;
@@ -37,6 +51,9 @@ public class SetCozyDay : FsmStateAction
     public override void Reset()
     {
         day = 1;
+        targetHour = new FsmInt { UseVariable = true }; // Optional by default
+        targetMinute = new FsmInt { UseVariable = true }; // Optional by default
+        transitionTime = 0f;
         finishEvent = null;
     }
 
@@ -62,8 +79,31 @@ public class SetCozyDay : FsmStateAction
             return;
         }
 
+        // Set day instantly
         timeModule.currentDay = day.Value;
         cozyWeather.events.RaiseOnDayChange();
+
+        // Transition to target time-of-day if specified
+        if (!targetHour.IsNone || !targetMinute.IsNone)
+        {
+            int hour = targetHour.IsNone ? timeModule.currentTime.hours : targetHour.Value;
+            int minute = targetMinute.IsNone ? timeModule.currentTime.minutes : targetMinute.Value;
+            MeridiemTime targetTime = new MeridiemTime(hour, minute, 0, 0);
+
+            float transition = transitionTime.IsNone ? 0f : transitionTime.Value;
+            if (transition > 0f)
+            {
+                float timeToSkip = (float)targetTime - (float)timeModule.currentTime;
+                if (timeToSkip < 0f) timeToSkip += 1f; // Handle wraparound (e.g., 23:00 to 01:00)
+                timeModule.TransitionTime(timeToSkip, transition);
+            }
+            else
+            {
+                timeModule.currentTime = targetTime;
+                cozyWeather.events.RaiseOnNewHour();
+                cozyWeather.events.RaiseOnMinutePass();
+            }
+        }
 
         if (finishEvent != null)
         {
