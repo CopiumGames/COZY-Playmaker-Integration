@@ -8,8 +8,7 @@
  * Non-existent PlayMaker events are safely ignored by PlayMaker.
  * 
  * Notes:
- * - Enable only the event broadcasts needed to avoid unnecessary FSM broadcasts.
- * - Toggles default to true for all events.
+ * - Toggles default to false for all events. Enable only what you need to avoid unnecessary FSM broadcasts.
  *
  * License:
  * This script is released into the public domain under the Creative Commons Zero 1.0 Universal (CC0 1.0) dedication.
@@ -33,44 +32,44 @@ public class CozyEventPlaymakerBridge : MonoBehaviour
     [Header("Time of Day Broadcast Toggles")]
     [SerializeField]
     [HutongGames.PlayMaker.Tooltip("Enable broadcasting the Evening event to PlayMaker FSMs")]
-    private bool enableEveningBroadcast = true;
+    private bool enableEveningBroadcast = false;
     [SerializeField]
     [HutongGames.PlayMaker.Tooltip("Enable broadcasting the Morning event to PlayMaker FSMs")]
-    private bool enableMorningBroadcast = true;
+    private bool enableMorningBroadcast = false;
     [SerializeField]
     [HutongGames.PlayMaker.Tooltip("Enable broadcasting the Night event to PlayMaker FSMs")]
-    private bool enableNightBroadcast = true;
+    private bool enableNightBroadcast = false;
     [SerializeField]
     [HutongGames.PlayMaker.Tooltip("Enable broadcasting the Day event to PlayMaker FSMs")]
-    private bool enableDayBroadcast = true;
+    private bool enableDayBroadcast = false;
     [SerializeField]
     [HutongGames.PlayMaker.Tooltip("Enable broadcasting the Dawn event to PlayMaker FSMs")]
-    private bool enableDawnBroadcast = true;
+    private bool enableDawnBroadcast = false;
     [SerializeField]
     [HutongGames.PlayMaker.Tooltip("Enable broadcasting the Afternoon event to PlayMaker FSMs")]
-    private bool enableAfternoonBroadcast = true;
+    private bool enableAfternoonBroadcast = false;
     [SerializeField]
     [HutongGames.PlayMaker.Tooltip("Enable broadcasting the Twilight event to PlayMaker FSMs")]
-    private bool enableTwilightBroadcast = true;
+    private bool enableTwilightBroadcast = false;
 
     [Header("Time Passage Broadcast Toggles")]
     [SerializeField]
     [HutongGames.PlayMaker.Tooltip("Enable broadcasting the New Hour event to PlayMaker FSMs")]
-    private bool enableNewHourBroadcast = true;
+    private bool enableNewHourBroadcast = false;
     [SerializeField]
     [HutongGames.PlayMaker.Tooltip("Enable broadcasting the New Minute event to PlayMaker FSMs")]
-    private bool enableNewMinuteBroadcast = true;
+    private bool enableNewMinuteBroadcast = false;
     [SerializeField]
     [HutongGames.PlayMaker.Tooltip("Enable broadcasting the New Day event to PlayMaker FSMs")]
-    private bool enableNewDayBroadcast = true;
+    private bool enableNewDayBroadcast = false;
     [SerializeField]
     [HutongGames.PlayMaker.Tooltip("Enable broadcasting the New Year event to PlayMaker FSMs")]
-    private bool enableNewYearBroadcast = true;
+    private bool enableNewYearBroadcast = false;
 
     [Header("Weather Broadcast Toggles")]
     [SerializeField]
     [HutongGames.PlayMaker.Tooltip("Enable broadcasting the Weather Change event to PlayMaker FSMs")]
-    private bool enableWeatherChangeBroadcast = true;
+    private bool enableWeatherChangeBroadcast = false;
 
     [Header("Time of Day Event Names")]
     [HutongGames.PlayMaker.Tooltip("PlayMaker event to send when the Cozy system enters evening")]
