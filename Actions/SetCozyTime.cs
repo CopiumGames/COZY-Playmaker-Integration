@@ -1,7 +1,12 @@
 /*
  * Summary:
- * This script sets the Year, Day, Hour, and/or Minute in COZY: Stylized Weather 3, updating only the specified values, and optionally sends a PlayMaker event.
+ * This script sets the Year, Day, Hour, and/or Minute in COZY: Stylized Weather 3, updating only the specified values, optionally with a transition time for the time component, and optionally sends a PlayMaker event.
  * Unspecified (null) values preserve the current state in COZY.
+ * 
+ * Notes:
+ * - Transition time (in seconds) applies to the time component (currentTime) only.
+ * - Day and year changes are applied instantly.
+ * - If transitionTime is 0 or None, changes are instant.
  * 
  * Event Setup:
  * It is recommended to create a global event in PlayMaker, e.g., "COZY/TimeSet", to notify other FSMs when the time is updated.
@@ -25,30 +30,34 @@ using HutongGames.PlayMaker;
 using DistantLands.Cozy;
 
 [ActionCategory("COZY Stylized Weather 3")]
-[HutongGames.PlayMaker.Tooltip("Sets the Year, Day, Hour, and/or Minute in COZY: Stylized Weather 3 and optionally sends an event")]
+[HutongGames.PlayMaker.Tooltip("Sets the Year, Day, Hour, and/or Minute in COZY: Stylized Weather 3 and optionally with a transition time and/or finish event")]
 public class SetCozyTime : FsmStateAction
 {
-    [HutongGames.PlayMaker.Tooltip("The year to set (integer). Leave as None to keep current year.")]
-    public FsmInt year;
+    [HutongGames.PlayMaker.Tooltip("Hour to set (0-23). Leave as None to keep current hour.")]
+    public FsmInt newHour;
 
-    [HutongGames.PlayMaker.Tooltip("The day to set (integer). Leave as None to keep current day.")]
-    public FsmInt day;
+    [HutongGames.PlayMaker.Tooltip("Minute to set (0-59). Leave as None to keep current minute.")]
+    public FsmInt newMinute;
 
-    [HutongGames.PlayMaker.Tooltip("The hour to set (0-23). Leave as None to keep current hour.")]
-    public FsmInt hour;
+    [HutongGames.PlayMaker.Tooltip("Day to set (Integer). Leave as None to keep current day.")]
+    public FsmInt newDay;
 
-    [HutongGames.PlayMaker.Tooltip("The minute to set (0-59). Leave as None to keep current minute.")]
-    public FsmInt minute;
+    [HutongGames.PlayMaker.Tooltip("Year to set. Leave as None to keep current year.")]
+    public FsmInt newYear;
+
+    [HutongGames.PlayMaker.Tooltip("Transition time in seconds for the time component (0 for instant)")]
+    public FsmFloat transitionTime;
 
     [HutongGames.PlayMaker.Tooltip("Event to send after setting the time")]
     public FsmEvent finishEvent;
 
     public override void Reset()
     {
-        year = new FsmInt { UseVariable = true }; // None by default
-        day = new FsmInt { UseVariable = true }; // None by default
-        hour = new FsmInt { UseVariable = true }; // None by default
-        minute = new FsmInt { UseVariable = true }; // None by default
+        newHour = new FsmInt { UseVariable = true };
+        newMinute = new FsmInt { UseVariable = true };
+        newDay = new FsmInt { UseVariable = true };
+        newYear = new FsmInt { UseVariable = true };
+        transitionTime = 0f;
         finishEvent = null;
     }
 
@@ -74,48 +83,52 @@ public class SetCozyTime : FsmStateAction
             return;
         }
 
-        bool timeUpdated = false;
+        bool timeChanged = false;
+        MeridiemTime targetTime = timeModule.currentTime;
 
-        // Set Year if specified
-        if (!year.IsNone)
+        // Set hour and minute
+        if (!newHour.IsNone || !newMinute.IsNone)
         {
-            timeModule.currentYear = year.Value;
-            cozyWeather.events.RaiseOnYearChange();
-            timeUpdated = true;
+            int hour = newHour.IsNone ? timeModule.currentTime.hours : newHour.Value;
+            int minute = newMinute.IsNone ? timeModule.currentTime.minutes : newMinute.Value;
+            targetTime = new MeridiemTime(hour, minute, timeModule.currentTime.seconds, timeModule.currentTime.milliseconds);
+            timeChanged = true;
         }
 
-        // Set Day if specified
-        if (!day.IsNone)
+        // Set day and year instantly
+        if (!newDay.IsNone)
         {
-            timeModule.currentDay = day.Value;
+            timeModule.currentDay = newDay.Value;
             cozyWeather.events.RaiseOnDayChange();
-            timeUpdated = true;
         }
 
-        // Set Hour and/or Minute if specified
-        if (!hour.IsNone || !minute.IsNone)
+        if (!newYear.IsNone)
         {
-            int currentHour = timeModule.currentTime.hours;
-            int currentMinute = timeModule.currentTime.minutes;
-
-            int newHour = !hour.IsNone ? hour.Value : currentHour;
-            int newMinute = !minute.IsNone ? minute.Value : currentMinute;
-
-            timeModule.currentTime = new MeridiemTime(newHour, newMinute);
-
-            if (!hour.IsNone)
-            {
-                cozyWeather.events.RaiseOnNewHour();
-            }
-            if (!minute.IsNone)
-            {
-                cozyWeather.events.RaiseOnMinutePass();
-            }
-            timeUpdated = true;
+            timeModule.currentYear = newYear.Value;
+            cozyWeather.events.RaiseOnYearChange();
         }
 
-        // Send PlayMaker event if any changes were made
-        if (timeUpdated && finishEvent != null)
+        // Apply time change
+        if (timeChanged)
+        {
+            float transition = transitionTime.IsNone ? 0f : transitionTime.Value;
+            if (transition > 0f)
+            {
+                // Calculate time to skip
+                float timeToSkip = (float)targetTime - (float)timeModule.currentTime;
+                if (timeToSkip < 0f) timeToSkip += 1f; // Handle wrap-around (e.g., 23:00 to 01:00)
+                timeModule.TransitionTime(timeToSkip, transition);
+            }
+            else
+            {
+                timeModule.currentTime = targetTime;
+                if (!newHour.IsNone) cozyWeather.events.RaiseOnNewHour();
+                if (!newMinute.IsNone) cozyWeather.events.RaiseOnMinutePass();
+            }
+        }
+
+        // Send PlayMaker event
+        if (finishEvent != null)
         {
             Fsm.Event(finishEvent);
         }
