@@ -16,7 +16,7 @@
  * Made by Grim (Copium Games) for the COZY community.
  * Give me a follow on X? <3  https://x.com/copiumgames
  *
- * Version 1.0
+ * Version 1.1
  */
 using UnityEngine;
 using HutongGames.PlayMaker;
@@ -36,6 +36,9 @@ public class SetCozyAtmosphere : FsmStateAction
     [HutongGames.PlayMaker.Tooltip("The transition time in seconds")]
     public FsmFloat transitionTime;
 
+    [HutongGames.PlayMaker.Tooltip("Wait until the transition is complete before finishing the action")]
+    public FsmBool waitForTransition;
+
     [HutongGames.PlayMaker.Tooltip("Event to send after setting the atmosphere")]
     public FsmEvent finishEvent;
 
@@ -43,54 +46,74 @@ public class SetCozyAtmosphere : FsmStateAction
     {
         atmosphereProfile = null;
         transitionTime = null;
+        waitForTransition = false;
         finishEvent = null;
     }
 
     public override void OnEnter()
     {
         DoSetAtmosphere();
-        Finish();
     }
 
     void DoSetAtmosphere()
     {
-        // Validate the atmosphere profile input
         if (atmosphereProfile.Value == null)
         {
-            Debug.LogWarning("SetAtmosphere: AtmosphereProfile is null.");
+            Debug.LogWarning("SetCozyAtmosphere: AtmosphereProfile is null.");
+            if (finishEvent != null) Fsm.Event(finishEvent);
+            Finish();
             return;
         }
 
         var profile = atmosphereProfile.Value as AtmosphereProfile;
         if (profile == null)
         {
-            Debug.LogWarning("SetAtmosphere: Object is not an AtmosphereProfile.");
+            Debug.LogWarning("SetCozyAtmosphere: Object is not an AtmosphereProfile.");
+            if (finishEvent != null) Fsm.Event(finishEvent);
+            Finish();
             return;
         }
 
-        // Get the COZY weather instance
         var cozyWeather = CozyWeather.instance;
         if (cozyWeather == null)
         {
-            Debug.LogWarning("SetAtmosphere: CozyWeather instance is null.");
+            Debug.LogWarning("SetCozyAtmosphere: CozyWeather instance is null.");
+            if (finishEvent != null) Fsm.Event(finishEvent);
+            Finish();
             return;
         }
 
-        // Get the CozyAtmosphereModule
         var atmosphereModule = cozyWeather.GetModule<CozyAtmosphereModule>();
         if (atmosphereModule == null)
         {
-            Debug.LogWarning("SetAtmosphere: CozyAtmosphereModule is null.");
+            Debug.LogWarning("SetCozyAtmosphere: CozyAtmosphereModule is null.");
+            if (finishEvent != null) Fsm.Event(finishEvent);
+            Finish();
             return;
         }
 
-        // Set the atmosphere using the correct method
-        atmosphereModule.ChangeAtmosphere(profile, transitionTime.Value);
+        float transition = transitionTime.IsNone ? 0f : transitionTime.Value;
+        atmosphereModule.ChangeAtmosphere(profile, transition);
 
-        // Send the event if specified
-        if (finishEvent != null)
+        if (!waitForTransition.Value || transition <= 0f)
         {
-            Fsm.Event(finishEvent);
+            if (finishEvent != null) Fsm.Event(finishEvent);
+            Finish();
+        }
+    }
+
+    public override void OnUpdate()
+    {
+        var cozyWeather = CozyWeather.instance;
+        if (cozyWeather == null) return;
+
+        var atmosphereModule = cozyWeather.GetModule<CozyAtmosphereModule>();
+        if (atmosphereModule == null) return;
+
+        if (!atmosphereModule.transitioningAtmosphere)
+        {
+            if (finishEvent != null) Fsm.Event(finishEvent);
+            Finish();
         }
     }
 }
