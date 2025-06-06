@@ -8,6 +8,7 @@
  * - Seamlessly rolls-over to the next day when applicable.
  * - Day and year changes are applied instantly.
  * - If transitionTime is 0 or None, changes are instant.
+ * - Enable 'Wait For Transition' to delay finishing until the time transition completes.
  * 
  * Event Setup:
  * It is recommended to create a global event in PlayMaker, e.g., "COZY/TimeSet", to notify other FSMs when the time is updated.
@@ -24,7 +25,7 @@
  * Made by Grim (Copium Games) for the COZY community.
  * Give me a follow on X? <3  https://x.com/copiumgames
  *
- * Version 1.1
+ * Version 1.2
  */
 using UnityEngine;
 using HutongGames.PlayMaker;
@@ -49,8 +50,14 @@ public class SetCozyTime : FsmStateAction
     [HutongGames.PlayMaker.Tooltip("Transition time in seconds for the time component (0 for instant)")]
     public FsmFloat transitionTime;
 
+    [HutongGames.PlayMaker.Tooltip("Wait until the transition is complete before finishing the action")]
+    public FsmBool waitForTransition;
+
     [HutongGames.PlayMaker.Tooltip("Event to send after setting the time")]
     public FsmEvent finishEvent;
+
+    private CozyTimeModule timeModule;
+    private bool isTransitioning;
 
     public override void Reset()
     {
@@ -59,28 +66,25 @@ public class SetCozyTime : FsmStateAction
         newDay = new FsmInt { UseVariable = true };
         newYear = new FsmInt { UseVariable = true };
         transitionTime = 0f;
+        waitForTransition = false;
         finishEvent = null;
     }
 
     public override void OnEnter()
     {
-        DoSetTime();
-        Finish();
-    }
-
-    void DoSetTime()
-    {
         var cozyWeather = CozyWeather.instance;
         if (cozyWeather == null)
         {
             Debug.LogWarning("SetCozyTime: CozyWeather instance is null.");
+            Finish();
             return;
         }
 
-        var timeModule = cozyWeather.timeModule;
+        timeModule = cozyWeather.timeModule;
         if (timeModule == null)
         {
             Debug.LogWarning("SetCozyTime: TimeModule is null.");
+            Finish();
             return;
         }
 
@@ -119,19 +123,46 @@ public class SetCozyTime : FsmStateAction
                 float timeToSkip = (float)targetTime - (float)timeModule.currentTime;
                 if (timeToSkip < 0f) timeToSkip += 1f; // Handle wrap-around (e.g., 23:00 to 01:00)
                 timeModule.TransitionTime(timeToSkip, transition);
+                isTransitioning = true;
             }
             else
             {
                 timeModule.currentTime = targetTime;
                 if (!newHour.IsNone) cozyWeather.events.RaiseOnNewHour();
                 if (!newMinute.IsNone) cozyWeather.events.RaiseOnMinutePass();
+                isTransitioning = false;
             }
         }
-
-        // Send PlayMaker event
-        if (finishEvent != null)
+        else
         {
-            Fsm.Event(finishEvent);
+            isTransitioning = false;
+        }
+
+        // Decide whether to finish immediately or wait
+        if (!waitForTransition.Value || !isTransitioning)
+        {
+            if (finishEvent != null)
+            {
+                Fsm.Event(finishEvent);
+            }
+            Finish();
+        }
+        // If waiting, OnUpdate will handle the rest
+    }
+
+    public override void OnUpdate()
+    {
+        if (isTransitioning)
+        {
+            if (!timeModule.transitioningTime)
+            {
+                // Transition is complete
+                if (finishEvent != null)
+                {
+                    Fsm.Event(finishEvent);
+                }
+                Finish();
+            }
         }
     }
 }

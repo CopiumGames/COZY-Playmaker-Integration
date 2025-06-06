@@ -6,6 +6,7 @@
  * - Transition time (in seconds) applies to the time component (currentTime) only.
  * - Day change is applied instantly.
  * - If transitionTime is 0 or None, time-of-day changes are instant.
+ * - Enable 'Wait For Transition' to delay finishing until the time transition completes.
  * 
  * Event Setup:
  * It is recommended to create a global event in PlayMaker, e.g., "COZY/DaySet", to notify other FSMs when the day changes.
@@ -22,7 +23,7 @@
  * Made by Grim (Copium Games) for the COZY community.
  * Give me a follow on X? <3  https://x.com/copiumgames
  *
- * Version 1.1
+ * Version 1.2
  */
 using UnityEngine;
 using HutongGames.PlayMaker;
@@ -45,37 +46,40 @@ public class SetCozyDay : FsmStateAction
     [HutongGames.PlayMaker.Tooltip("Transition time in seconds for the time component (0 for instant)")]
     public FsmFloat transitionTime;
 
+    [HutongGames.PlayMaker.Tooltip("Wait until the transition is complete before finishing the action")]
+    public FsmBool waitForTransition;
+
     [HutongGames.PlayMaker.Tooltip("Event to send after setting the day")]
     public FsmEvent finishEvent;
+
+    private CozyTimeModule timeModule;
+    private bool isTransitioning;
 
     public override void Reset()
     {
         day = 1;
-        targetHour = new FsmInt { UseVariable = true }; // Optional by default
-        targetMinute = new FsmInt { UseVariable = true }; // Optional by default
+        targetHour = new FsmInt { UseVariable = true };
+        targetMinute = new FsmInt { UseVariable = true };
         transitionTime = 0f;
+        waitForTransition = false;
         finishEvent = null;
     }
 
     public override void OnEnter()
     {
-        DoSetDay();
-        Finish();
-    }
-
-    void DoSetDay()
-    {
         var cozyWeather = CozyWeather.instance;
         if (cozyWeather == null)
         {
             Debug.LogWarning("SetCozyDay: CozyWeather instance is null.");
+            Finish();
             return;
         }
 
-        var timeModule = cozyWeather.timeModule;
+        timeModule = cozyWeather.timeModule;
         if (timeModule == null)
         {
             Debug.LogWarning("SetCozyDay: TimeModule is null.");
+            Finish();
             return;
         }
 
@@ -96,18 +100,42 @@ public class SetCozyDay : FsmStateAction
                 float timeToSkip = (float)targetTime - (float)timeModule.currentTime;
                 if (timeToSkip < 0f) timeToSkip += 1f; // Handle wraparound (e.g., 23:00 to 01:00)
                 timeModule.TransitionTime(timeToSkip, transition);
+                isTransitioning = true;
             }
             else
             {
                 timeModule.currentTime = targetTime;
                 cozyWeather.events.RaiseOnNewHour();
                 cozyWeather.events.RaiseOnMinutePass();
+                isTransitioning = false;
             }
         }
-
-        if (finishEvent != null)
+        else
         {
-            Fsm.Event(finishEvent);
+            isTransitioning = false;
+        }
+
+        // Decide whether to finish immediately or wait
+        if (!waitForTransition.Value || !isTransitioning)
+        {
+            if (finishEvent != null)
+            {
+                Fsm.Event(finishEvent);
+            }
+            Finish();
+        }
+    }
+
+    public override void OnUpdate()
+    {
+        if (isTransitioning && !timeModule.transitioningTime)
+        {
+            // Transition is complete
+            if (finishEvent != null)
+            {
+                Fsm.Event(finishEvent);
+            }
+            Finish();
         }
     }
 }
