@@ -3,13 +3,17 @@
  * This script acts as a bridge between COZY: Stylized Weather 3 events and PlayMaker, broadcasting configured PlayMaker events when COZY events (e.g., time of day, weather changes) are triggered.
  * 
  * Event Setup:
- * It is recommended to create global events in PlayMaker (e.g., "COZY/Evening", "COZY/WeatherChange") for each COZY event you want to bridge.
- * Assign these event names in the Inspector fields to enable broadcasting to PlayMaker FSMs when corresponding COZY events occur.
+ * Create global events in PlayMaker (e.g., "COZY/Evening", "COZY/WeatherChange") for each COZY event you want to bridge.
+ * Assign these event names in the Inspector fields and enable the corresponding broadcast toggle to allow broadcasting to PlayMaker FSMs.
  * Non-existent PlayMaker events are safely ignored by PlayMaker.
+ * 
+ * Notes:
+ * - Enable only the event broadcasts needed to avoid unnecessary FSM broadcasts.
+ * - Toggles default to true for all events.
  *
  * License:
  * This script is released into the public domain under the Creative Commons Zero 1.0 Universal (CC0 1.0) dedication.
- * You are free to use, copy, modify, distribute, and sell this script in any way, with no attribution required.
+ * You are free to use, copy, or modify this script in any way, with no attribution required.
  * No guarantees are provided with this script. Use at your own risk.
  * To view a copy of this license, visit https://creativecommons.org/publicdomain/zero/1.0/.
  *
@@ -26,7 +30,49 @@ using DistantLands.Cozy;
 public class CozyEventPlaymakerBridge : MonoBehaviour
 {
     #region Inspector Fields
-    [Header("Time of Day Events")]
+    [Header("Time of Day Broadcast Toggles")]
+    [SerializeField]
+    [HutongGames.PlayMaker.Tooltip("Enable broadcasting the Evening event to PlayMaker FSMs")]
+    private bool enableEveningBroadcast = true;
+    [SerializeField]
+    [HutongGames.PlayMaker.Tooltip("Enable broadcasting the Morning event to PlayMaker FSMs")]
+    private bool enableMorningBroadcast = true;
+    [SerializeField]
+    [HutongGames.PlayMaker.Tooltip("Enable broadcasting the Night event to PlayMaker FSMs")]
+    private bool enableNightBroadcast = true;
+    [SerializeField]
+    [HutongGames.PlayMaker.Tooltip("Enable broadcasting the Day event to PlayMaker FSMs")]
+    private bool enableDayBroadcast = true;
+    [SerializeField]
+    [HutongGames.PlayMaker.Tooltip("Enable broadcasting the Dawn event to PlayMaker FSMs")]
+    private bool enableDawnBroadcast = true;
+    [SerializeField]
+    [HutongGames.PlayMaker.Tooltip("Enable broadcasting the Afternoon event to PlayMaker FSMs")]
+    private bool enableAfternoonBroadcast = true;
+    [SerializeField]
+    [HutongGames.PlayMaker.Tooltip("Enable broadcasting the Twilight event to PlayMaker FSMs")]
+    private bool enableTwilightBroadcast = true;
+
+    [Header("Time Passage Broadcast Toggles")]
+    [SerializeField]
+    [HutongGames.PlayMaker.Tooltip("Enable broadcasting the New Hour event to PlayMaker FSMs")]
+    private bool enableNewHourBroadcast = true;
+    [SerializeField]
+    [HutongGames.PlayMaker.Tooltip("Enable broadcasting the New Minute event to PlayMaker FSMs")]
+    private bool enableNewMinuteBroadcast = true;
+    [SerializeField]
+    [HutongGames.PlayMaker.Tooltip("Enable broadcasting the New Day event to PlayMaker FSMs")]
+    private bool enableNewDayBroadcast = true;
+    [SerializeField]
+    [HutongGames.PlayMaker.Tooltip("Enable broadcasting the New Year event to PlayMaker FSMs")]
+    private bool enableNewYearBroadcast = true;
+
+    [Header("Weather Broadcast Toggles")]
+    [SerializeField]
+    [HutongGames.PlayMaker.Tooltip("Enable broadcasting the Weather Change event to PlayMaker FSMs")]
+    private bool enableWeatherChangeBroadcast = true;
+
+    [Header("Time of Day Event Names")]
     [HutongGames.PlayMaker.Tooltip("PlayMaker event to send when the Cozy system enters evening")]
     public string eveningEventName = "COZY/Evening";
     [HutongGames.PlayMaker.Tooltip("PlayMaker event to send when the Cozy system enters morning")]
@@ -42,7 +88,7 @@ public class CozyEventPlaymakerBridge : MonoBehaviour
     [HutongGames.PlayMaker.Tooltip("PlayMaker event to send when the Cozy system enters twilight")]
     public string twilightEventName = "COZY/Twilight";
 
-    [Header("Time Passage Events")]
+    [Header("Time Passage Event Names")]
     [HutongGames.PlayMaker.Tooltip("PlayMaker event to send when a new hour begins in Cozy")]
     public string newHourEventName = "COZY/NewHour";
     [HutongGames.PlayMaker.Tooltip("PlayMaker event to send when a new minute passes in Cozy")]
@@ -52,7 +98,7 @@ public class CozyEventPlaymakerBridge : MonoBehaviour
     [HutongGames.PlayMaker.Tooltip("PlayMaker event to send when a new year begins in Cozy")]
     public string newYearEventName = "COZY/NewYear";
 
-    [Header("Weather Events")]
+    [Header("Weather Event Names")]
     [HutongGames.PlayMaker.Tooltip("PlayMaker event to send when the weather changes in Cozy")]
     public string weatherChangeEventName = "COZY/WeatherChange";
     #endregion
@@ -96,7 +142,7 @@ public class CozyEventPlaymakerBridge : MonoBehaviour
     #region Event Handlers
     private void HandleEvening()
     {
-        if (!string.IsNullOrEmpty(eveningEventName))
+        if (enableEveningBroadcast && !string.IsNullOrEmpty(eveningEventName))
         {
             PlayMakerFSM.BroadcastEvent(eveningEventName);
             Debug.Log($"CozyEventPlaymakerBridge: Broadcasted '{eveningEventName}' for Evening");
@@ -105,7 +151,7 @@ public class CozyEventPlaymakerBridge : MonoBehaviour
 
     private void HandleMorning()
     {
-        if (!string.IsNullOrEmpty(morningEventName))
+        if (enableMorningBroadcast && !string.IsNullOrEmpty(morningEventName))
         {
             PlayMakerFSM.BroadcastEvent(morningEventName);
             Debug.Log($"CozyEventPlaymakerBridge: Broadcasted '{morningEventName}' for Morning");
@@ -114,7 +160,7 @@ public class CozyEventPlaymakerBridge : MonoBehaviour
 
     private void HandleNight()
     {
-        if (!string.IsNullOrEmpty(nightEventName))
+        if (enableNightBroadcast && !string.IsNullOrEmpty(nightEventName))
         {
             PlayMakerFSM.BroadcastEvent(nightEventName);
             Debug.Log($"CozyEventPlaymakerBridge: Broadcasted '{nightEventName}' for Night");
@@ -123,7 +169,7 @@ public class CozyEventPlaymakerBridge : MonoBehaviour
 
     private void HandleDay()
     {
-        if (!string.IsNullOrEmpty(dayEventName))
+        if (enableDayBroadcast && !string.IsNullOrEmpty(dayEventName))
         {
             PlayMakerFSM.BroadcastEvent(dayEventName);
             Debug.Log($"CozyEventPlaymakerBridge: Broadcasted '{dayEventName}' for Day");
@@ -132,7 +178,7 @@ public class CozyEventPlaymakerBridge : MonoBehaviour
 
     private void HandleDawn()
     {
-        if (!string.IsNullOrEmpty(dawnEventName))
+        if (enableDawnBroadcast && !string.IsNullOrEmpty(dawnEventName))
         {
             PlayMakerFSM.BroadcastEvent(dawnEventName);
             Debug.Log($"CozyEventPlaymakerBridge: Broadcasted '{dawnEventName}' for Dawn");
@@ -141,7 +187,7 @@ public class CozyEventPlaymakerBridge : MonoBehaviour
 
     private void HandleAfternoon()
     {
-        if (!string.IsNullOrEmpty(afternoonEventName))
+        if (enableAfternoonBroadcast && !string.IsNullOrEmpty(afternoonEventName))
         {
             PlayMakerFSM.BroadcastEvent(afternoonEventName);
             Debug.Log($"CozyEventPlaymakerBridge: Broadcasted '{afternoonEventName}' for Afternoon");
@@ -150,7 +196,7 @@ public class CozyEventPlaymakerBridge : MonoBehaviour
 
     private void HandleTwilight()
     {
-        if (!string.IsNullOrEmpty(twilightEventName))
+        if (enableTwilightBroadcast && !string.IsNullOrEmpty(twilightEventName))
         {
             PlayMakerFSM.BroadcastEvent(twilightEventName);
             Debug.Log($"CozyEventPlaymakerBridge: Broadcasted '{twilightEventName}' for Twilight");
@@ -159,7 +205,7 @@ public class CozyEventPlaymakerBridge : MonoBehaviour
 
     private void HandleNewHour()
     {
-        if (!string.IsNullOrEmpty(newHourEventName))
+        if (enableNewHourBroadcast && !string.IsNullOrEmpty(newHourEventName))
         {
             PlayMakerFSM.BroadcastEvent(newHourEventName);
             Debug.Log($"CozyEventPlaymakerBridge: Broadcasted '{newHourEventName}' for New Hour");
@@ -168,7 +214,7 @@ public class CozyEventPlaymakerBridge : MonoBehaviour
 
     private void HandleNewMinute()
     {
-        if (!string.IsNullOrEmpty(newMinuteEventName))
+        if (enableNewMinuteBroadcast && !string.IsNullOrEmpty(newMinuteEventName))
         {
             PlayMakerFSM.BroadcastEvent(newMinuteEventName);
             Debug.Log($"CozyEventPlaymakerBridge: Broadcasted '{newMinuteEventName}' for New Minute");
@@ -177,7 +223,7 @@ public class CozyEventPlaymakerBridge : MonoBehaviour
 
     private void HandleNewDay()
     {
-        if (!string.IsNullOrEmpty(newDayEventName))
+        if (enableNewDayBroadcast && !string.IsNullOrEmpty(newDayEventName))
         {
             PlayMakerFSM.BroadcastEvent(newDayEventName);
             Debug.Log($"CozyEventPlaymakerBridge: Broadcasted '{newDayEventName}' for New Day");
@@ -186,7 +232,7 @@ public class CozyEventPlaymakerBridge : MonoBehaviour
 
     private void HandleNewYear()
     {
-        if (!string.IsNullOrEmpty(newYearEventName))
+        if (enableNewYearBroadcast && !string.IsNullOrEmpty(newYearEventName))
         {
             PlayMakerFSM.BroadcastEvent(newYearEventName);
             Debug.Log($"CozyEventPlaymakerBridge: Broadcasted '{newYearEventName}' for New Year");
@@ -195,7 +241,7 @@ public class CozyEventPlaymakerBridge : MonoBehaviour
 
     private void HandleWeatherChange()
     {
-        if (!string.IsNullOrEmpty(weatherChangeEventName))
+        if (enableWeatherChangeBroadcast && !string.IsNullOrEmpty(weatherChangeEventName))
         {
             PlayMakerFSM.BroadcastEvent(weatherChangeEventName);
             Debug.Log($"CozyEventPlaymakerBridge: Broadcasted '{weatherChangeEventName}' for Weather Change");
